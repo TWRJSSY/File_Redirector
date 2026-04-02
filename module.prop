@@ -1,0 +1,6 @@
+id=file_redirector
+name=文件重定向
+version=v3.4.2
+versionCode=20260402
+author=听闻人间十三月
+description=「未运行😵」 基于 inotify 事件驱动与 mv 原子操作构建的文件重定向模块。
