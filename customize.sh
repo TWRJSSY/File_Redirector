@@ -42,9 +42,9 @@ if [ -f "$INSTALLED/redirect.rules" ]; then
         NEW="$MODPATH/redirect.rules"
         OUT="$MODPATH/redirect.rules.merged"
 
-        # 写入头部注释（来自新文件）
+        # 写入头部注释（来自新文件，遇到规则行或示例行停止）
         while IFS= read -r line; do
-            case "$line" in '['*) break ;; esac
+            case "$line" in '['*|'##'*) break ;; esac
             printf '%s\n' "$line" >> "$OUT"
         done < "$NEW"
 
