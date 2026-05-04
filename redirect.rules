@@ -1,0 +1,14 @@
+# redirect.rules  —  听闻人间十三月
+# “远处烟雨下的漓江每次都是匆匆而过”
+#──────────────────────
+
+
+/sdcard/DCIM/taplus/taplus_image|*|/sdcard/Pictures/taplus
+/sdcard/DCIM/王者营地|*|/sdcard/Pictures/Camp
+/sdcard/DCIM/Camera|MEITU_*|/sdcard/Pictures/mtxx
+/sdcard/DCIM/Camera|retouch_*|/sdcard/Pictures/retouch
+/sdcard/Pictures|tb_image_share_*|/sdcard/Pictures/Taobao
+/sdcard/Pictures|17???????????.png|/sdcard/Pictures/Doubao
+/sdcard/Pictures|share_*.jpeg|/sdcard/Pictures/Doubao
+/sdcard/DCIM|Camera_XHS_*|/sdcard/Download/xhs
+/sdcard/Download|*_n_webp_mw_1|/sdcard/Download/xhs/Memes

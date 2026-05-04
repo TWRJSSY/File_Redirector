@@ -1,0 +1,1014 @@
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>文件重定向</title>
+<style>
+/* 默认：浅色主题 */
+:root{
+  --bg:#f2f2f7;--sur:#ffffff;--sur2:#f5f5f5;--sur3:#ebebeb;
+  --pri:#0a84ff;--red:#ff3b30;--grn:#34c759;--ylw:#ff9f0a;--ora:#ff6b00;
+  --txt:#1c1c1e;--txt2:#6c6c70;--bdr:#d1d1d6;--r:12px;--hdr-bg:#ffffff;
+}
+/* 深色主题：body.dark */
+body.dark{
+  --bg:#0f0f0f;--sur:#1a1a1a;--sur2:#212121;--sur3:#2c2c2c;
+  --pri:#4f9eff;--red:#ff5555;--grn:#4caf50;--ylw:#f0b429;--ora:#ff9800;
+  --txt:#e0e0e0;--txt2:#888;--bdr:#252525;--hdr-bg:#1a1a1a;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,sans-serif;font-size:14px;overscroll-behavior:none;padding-bottom:70px;transition:background .3s,color .3s}
+
+/* 顶栏 */
+.hdr{background:var(--hdr-bg);padding:14px 16px 12px;border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:99;display:flex;justify-content:space-between;align-items:flex-start;transition:background .3s}
+.hdr-left{flex:1;min-width:0}
+.hdr-title{font-size:20px;font-weight:700;color:var(--txt);letter-spacing:-.3px}
+.hdr-poem{font-size:12px;color:var(--txt2);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:color .2s;opacity:.8}
+.hdr-poem:active{color:var(--pri)}
+.hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:12px}
+.hdr-status-row{display:flex;align-items:center;gap:6px}
+.hdr-status-txt{font-size:13px;font-weight:600;color:var(--txt)}
+.status-icon{width:24px;height:24px;flex-shrink:0}
+.hdr-clock{font-size:11px;color:var(--txt2);font-variant-numeric:tabular-nums;letter-spacing:.3px}
+
+/* 底部标签栏 */
+.tabs{display:flex;background:var(--sur);border-top:1px solid var(--bdr);position:fixed;bottom:0;left:0;right:0;z-index:99;transition:background .3s}
+.tab{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--txt2);font-size:10px;transition:.2s;border:none;background:none;outline:none}
+.tab.act{color:var(--pri)}
+.tab svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pg{display:none;padding:14px}
+.pg.act{display:block}
+
+/* 通用 */
+.card{background:var(--sur);border-radius:var(--r);padding:14px;margin-bottom:12px;transition:background .3s}
+.ctit{font-size:11px;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;font-weight:500}
+.row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bdr);cursor:default}
+.row:last-child{border-bottom:none}
+.row.tap{cursor:pointer}
+.row.tap:active{opacity:.6}
+.rl{color:var(--txt2);font-size:13px}
+.rv{font-weight:500;font-size:13px;color:var(--txt);text-align:right;white-space:nowrap}
+.rv.link{color:var(--pri)}
+.bdg{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
+.bdg.run{background:rgba(76,175,80,.15);color:var(--grn)}
+.bdg.stp{background:rgba(255,85,85,.15);color:var(--red)}
+
+/* 按钮 */
+.btn{padding:9px 16px;border-radius:9px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:.15s;outline:none;background:var(--sur3);color:var(--txt)}
+.btn:active{opacity:.65}
+.bp{background:var(--pri);color:#fff}
+.bd{background:var(--red);color:#fff}
+.bsm{padding:5px 12px;font-size:12px}
+
+/* 开关 */
+.sw{position:relative;width:44px;height:24px;flex-shrink:0}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sl{position:absolute;inset:0;background:#c7c7cc;border-radius:24px;cursor:pointer;transition:.3s}
+.sl:before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+.sw input:checked+.sl{background:var(--pri)}
+.sw input:checked+.sl:before{transform:translateX(20px)}
+body.dark .sl{background:#444}
+body.dark .log-box{background:#080808;color:#e0e0e0;border-color:#252525}
+body.dark .li{color:#e0e0e0}
+body.dark .lw{color:#f0b429}
+body.dark .le{color:#ff5555}
+body.dark .ld{color:#666}
+body.dark .ri{border-left-color:var(--pri)}
+body.dark code{background:rgba(255,255,255,.08)}
+body.dark .toast-bar{background:#222}
+/* 输入 */
+.fi{width:100%;background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;color:var(--txt);font-size:13px;transition:background .3s,border .2s}
+.fi:focus{outline:none;border-color:var(--pri)}
+.fg{margin-bottom:13px}
+.fl{font-size:12px;color:var(--txt2);margin-bottom:5px;display:block}
+.num-in{width:70px;background:var(--sur2);border:1px solid var(--bdr);border-radius:7px;padding:6px 10px;color:var(--txt);font-size:13px;text-align:center;transition:background .3s}
+.num-in:focus{outline:none;border-color:var(--pri)}
+
+/* 规则卡片 */
+.ri{background:var(--sur);border-radius:10px;padding:13px;margin-bottom:9px;border-left:3px solid var(--pri);transition:opacity .2s}
+.ri.rule-off{opacity:.45;border-left-color:var(--sur3)}
+.rules-group-title{font-size:11px;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding:8px 2px 4px;margin-top:4px;border-bottom:1px solid var(--bdr);margin-bottom:8px}
+.r-note{font-size:13px;font-weight:500;color:var(--txt);margin-bottom:6px}
+.rp{font-size:12px;color:var(--txt2);margin:2px 0}
+.rp b{color:var(--txt);font-weight:500}
+.ra{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}
+.empty{text-align:center;color:var(--txt2);padding:40px 0;font-size:13px}
+
+/* 设置行 */
+.srow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--bdr)}
+.srow:last-child{border-bottom:none}
+.si .sl-t{font-weight:500;font-size:14px}
+.si .sl-d{font-size:12px;color:var(--txt2);margin-top:3px;line-height:1.4}
+
+/* 日志 */
+.log-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.log-box{background:#f0f0f0;border-radius:9px;padding:12px;font-family:monospace;font-size:11.5px;line-height:1.75;height:52vh;overflow-y:auto;white-space:pre-wrap;word-break:break-all;border:1px solid var(--bdr);color:#1c1c1e}
+
+/* 日志模式切换 */
+.log-mode{display:flex;gap:6px;margin-bottom:8px}
+.log-mode-btn{flex:1;padding:7px 0;border-radius:8px;border:1px solid var(--bdr);background:var(--sur2);color:var(--txt2);font-size:12px;font-weight:500;cursor:pointer;transition:.15s;text-align:center}
+.log-mode-btn.act{background:var(--pri);color:#fff;border-color:var(--pri)}
+
+.detail-item{font-size:13px;color:var(--txt);padding:7px 0;border-bottom:1px solid var(--bdr);word-break:break-all;line-height:1.5}
+.detail-item:last-child{border-bottom:none}
+.li{color:#1c1c1e}.lw{color:#c07800}.le{color:#d32f2f}.ld{color:#888}
+.ts{font-size:11px;color:var(--txt2);margin-bottom:5px}
+.aref{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--txt2)}
+.aref input{accent-color:var(--pri)}
+
+/* 弹窗 */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end}
+.ov.open{display:flex}
+.mod{background:var(--sur);border-radius:var(--r) var(--r) 0 0;padding:20px;width:100%;max-height:88vh;overflow-y:auto;transition:background .3s}
+.mod h3{font-size:16px;font-weight:600;margin-bottom:16px}
+.ma{display:flex;gap:10px;margin-top:16px}
+.ma .btn{flex:1}
+.fab{position:fixed;bottom:72px;right:18px;width:50px;height:50px;border-radius:50%;background:var(--pri);align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(79,158,255,.4);z-index:100;border:none;font-size:24px;color:#fff;display:none}
+
+/* 诗词浮窗 */
+.poem-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;align-items:center;justify-content:center;padding:20px}
+.poem-overlay.open{display:flex}
+.poem-card{background:var(--sur);border-radius:16px;padding:28px 24px;width:100%;max-width:360px;text-align:center}
+.poem-body{font-size:17px;font-weight:500;color:var(--txt);line-height:1.8;margin-bottom:12px}
+.poem-meta{font-size:13px;color:var(--txt2);margin-bottom:20px}
+.poem-copy{width:100%;padding:12px;border-radius:12px;background:var(--pri);color:#fff;border:none;font-size:15px;font-weight:500;cursor:pointer}
+
+
+/* Toast */
+.toast-bar{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;opacity:0;transition:.25s;z-index:400;white-space:nowrap;pointer-events:none}
+.toast-bar.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-title">文件重定向<span id="hdrVer" style="font-size:12px;font-weight:400;color:var(--txt2);margin-left:6px;letter-spacing:0;vertical-align:middle;opacity:.8"></span></div>
+    <div class="hdr-poem" id="poemLine" onclick="showPoem()">...</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-status-row">
+      <span class="hdr-status-txt" id="hdStatusTxt">未运行</span>
+      <svg class="status-icon" id="hdStatusIcon" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="11" fill="#f0b429"/>
+        <circle cx="8" cy="12" r="1.5" fill="white"/><circle cx="12" cy="12" r="1.5" fill="white"/><circle cx="16" cy="12" r="1.5" fill="white"/>
+      </svg>
+    </div>
+    <div class="hdr-clock" id="clockEl">--:--:--</div>
+  </div>
+</div>
+
+<!-- 状态页 -->
+<div id="p0" class="pg act">
+  <div class="card">
+    <div class="ctit">服务状态</div>
+    <div class="row"><span class="rl">运行状态</span><span id="sStat" class="bdg stp">未运行</span></div>
+    <div class="row"><span class="rl">看门狗 PID</span><span id="sWdPid" class="rv">—</span></div>
+    <div class="row"><span class="rl">主服务 PID</span><span id="sPid" class="rv">—</span></div>
+    <div class="row tap" onclick="showRules()"><span class="rl">有效规则</span><span style="display:flex;align-items:center;gap:3px"><span id="sRules" class="rv link">—</span><span style="color:var(--pri);font-size:16px;line-height:1;opacity:.8">›</span></span></div>
+    <div class="row tap" onclick="showDirs()"><span class="rl">监控目录</span><span style="display:flex;align-items:center;gap:3px"><span id="sDirs" class="rv link">—</span><span style="color:var(--pri);font-size:16px;line-height:1;opacity:.8">›</span></span></div>
+
+  </div>
+
+  <div class="card">
+    <div class="ctit">功能设置</div>
+    <div class="srow">
+      <div class="si">
+        <div class="sl-t">启用模块</div>
+        <div class="sl-d">控制模块的运行与停止。关闭后将终止所有服务进程，开启后自动重新初始化</div>
+      </div>
+      <label class="sw"><input type="checkbox" id="swModule" onchange="toggleModule(this.checked)"><span class="sl"></span></label>
+    </div>
+    <div class="srow">
+      <div class="si"><div class="sl-t">初始化扫描</div><div class="sl-d">服务完成初始化后对所有监控目录做全量扫描，移走所有符合规则的文件。</div></div>
+      <label class="sw"><input type="checkbox" id="swSS" checked onchange="applySetting('STARTUP_SCAN',this.checked?'1':'0')"><span class="sl"></span></label>
+    </div>
+    <div class="srow" style="border-bottom:none">
+      <div class="si">
+        <div class="sl-t">深色模式</div>
+        <div class="sl-d">切换浅色 / 深色主题</div>
+      </div>
+      <label class="sw"><input type="checkbox" id="swTheme" onchange="toggleTheme(this.checked)"><span class="sl"></span></label>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ctit">参数调节</div>
+    <div class="srow" style="border-bottom:none">
+      <div class="si"><div class="sl-t">日志保留天数</div><div class="sl-d">超过后下次服务启动时自动清空日志文件</div></div>
+      <input type="number" class="num-in" id="inLD" min="1" max="90" value="7" onblur="applySetting('LOG_KEEP_DAYS',this.value.trim()||'7')">
+    </div>
+  </div>
+  <div class="card">
+    <div class="ctit">手动清理空文件夹</div>
+    <div class="srow">
+      <div class="si">
+        <div class="sl-t">扫描 /sdcard</div>
+        <div class="sl-d">递归扫描内部存储（/sdcard），rmdir 遇非空目录自动跳过，不会误删有内容的目录。在扫描过程中 WebUI 可能会出现卡顿，属正常现象，请耐心等待扫描完成。</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <button class="btn bp" id="btnSweep" onclick="manualSweep()" style="flex:1">扫描并清理</button>
+    </div>
+    <div id="sweepLog" style="display:none;margin-top:8px;font-size:11px;font-family:monospace;color:var(--txt2);max-height:160px;overflow-y:auto;background:var(--bg);border:1px solid var(--bdr);border-radius:6px;padding:6px 8px;white-space:pre-wrap;word-break:break-all"></div>
+  </div>
+</div>
+
+<!-- 规则页 -->
+<div id="p1" class="pg">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <span style="font-size:11px;color:var(--txt2);opacity:.7">规则修改后自动热重启</span>
+    <button class="btn bsm" id="btnSort" onclick="toggleSortMode()" style="font-size:12px;padding:5px 12px">排序</button>
+  </div>
+  <div id="rList"></div>
+  <div id="rListSpacer" style="height:70px"></div>
+  <div id="rEmpty" class="empty" style="display:none">
+    <div style="font-size:32px;margin-bottom:8px">📋</div>暂无规则，点右下角 + 添加
+  </div>
+</div>
+<button id="fab" class="fab" onclick="openAdd()">+</button>
+
+
+<!-- 日志页 -->
+<div id="p2" class="pg">
+  <div class="log-hdr">
+    <div id="logTs" class="ts" style="margin:0">—</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn bsm" onclick="clearLog()">清空</button>
+      <button class="btn bsm bp" onclick="loadLog()">刷新</button>
+    </div>
+  </div>
+  <!-- 简略/详细模式切换 -->
+  <div class="log-mode">
+    <div class="log-mode-btn act" id="btnModeSimple" onclick="setLogMode('simple')">简略</div>
+    <div class="log-mode-btn" id="btnModeDetail" onclick="setLogMode('detail')">详细</div>
+  </div>
+
+  <div id="logBox" class="log-box">加载中...</div>
+</div>
+
+<!-- 底部标签栏 -->
+<div class="tabs">
+  <button class="tab act" onclick="go(0)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>状态
+  </button>
+  <button class="tab" onclick="go(1)">
+    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>规则
+  </button>
+  <button class="tab" onclick="go(2)">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>日志
+  </button>
+</div>
+
+<!-- 规则编辑弹窗 -->
+<div id="modal" class="ov" onclick="if(event.target===this)closeModal()">
+  <div class="mod">
+    <h3 id="mTitle">添加规则</h3>
+    <div class="fg"><label class="fl">备注（可选）</label><input id="fNote" class="fi" placeholder="如：QQ保存的图片"></div>
+    <div class="fg"><label class="fl">监控目录</label><input id="fSrc" class="fi" placeholder="/sdcard/DCIM/xxx"></div>
+    <div class="fg"><label class="fl">匹配规则（留空=全部，支持 * ?）</label><input id="fPat" class="fi" placeholder="*.jpg 或留空；支持 * 和 ? 通配"></div>
+    <div class="fg"><label class="fl">目标目录</label><input id="fDst" class="fi" placeholder="/sdcard/Pictures/xxx"></div>
+
+
+    <div class="ma">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn bp" onclick="saveRule()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 详情弹窗（规则/目录展开） -->
+<div id="infoModal" class="ov" onclick="if(event.target===this)closeInfo()">
+  <div class="mod">
+    <h3 id="infoTitle">—</h3>
+    <div id="infoList"></div>
+    <div style="margin-top:16px"><button class="btn" style="width:100%" onclick="closeInfo()">关闭</button></div>
+  </div>
+</div>
+
+<!-- 诗词浮窗 -->
+<div id="poemOverlay" class="poem-overlay" onclick="if(event.target===this)closePoemOverlay()">
+  <div class="poem-card">
+    <div class="poem-body" id="poemBody">—</div>
+    <div class="poem-meta" id="poemMeta">—</div>
+    <button class="poem-copy" onclick="copyPoem()">复制</button>
+  </div>
+</div>
+
+<div id="toastBar" class="toast-bar"></div>
+
+<script>
+// ── KSU exec ─────────────────────────────────────────────────
+// ── localStorage 备注存取 ──────────────────────────────────
+function _noteKey(src,pat,dst){return 'note:'+src+'|'+pat+'|'+dst;}
+function getNoteKey(src,pat,dst){try{return localStorage.getItem(_noteKey(src,pat,dst))||'';}catch(e){return '';}}
+function setNoteKey(src,pat,dst,val){try{if(val)localStorage.setItem(_noteKey(src,pat,dst),val);else localStorage.removeItem(_noteKey(src,pat,dst));}catch(e){}}
+
+// 获取可用的 bridge 对象（KSU 用 ksu，APatch 用 apd）
+function _bridge(){
+  if(typeof ksu!=='undefined')return ksu;
+  if(typeof apd!=='undefined')return apd;
+  return null;
+}
+
+var _cbSeq=0;
+function exec(cmd,cb){
+  var b=_bridge();
+  if(!b){if(cb)cb(-1,'','bridge N/A');return '';}
+  if(!cb){
+    try{return String(b.exec(cmd)||'');}catch(e){return '';}
+  }
+  var name='__cb'+(++_cbSeq)+'_'+Date.now();
+  window[name]=function(code,out,err){
+    try{delete window[name];}catch(_){}
+    cb(parseInt(code)||0,(out||'').trim(),(err||'').trim());
+  };
+  try{
+    b.exec(cmd,'{}',name);
+  }catch(e){
+    try{b.exec(cmd,name);}
+    catch(e2){try{delete window[name];}catch(_){}cb(-1,'',String(e2));}
+  }
+}
+
+// ── 常量 ─────────────────────────────────────────────────────
+var M='/data/adb/modules/file_redirector';
+var SH=M+'/service.sh';
+var LF=M+'/redirector.log';
+var LK=M+'/.service.pid';
+var WK=M+'/.watchdog.pid';
+var RF=M+'/redirect.rules';
+
+var editIdx=-1,rules=[],hdrLines=[],autoTimer=null,curTab=0;
+var _infoRules=[],_infoDirs=[];
+
+var _cfg={};
+var _moduleEnabled=true; // 模块开关内存状态，唯一真相
+var _curPoem=null;
+
+// ── 诗词库 ───────────────────────────────────────────────────
+var POEMS=[
+  {s:'晴川历历汉阳树，芳草萋萋鹦鹉洲。',t:'黄鹤楼',a:'崔颢'},
+  {s:'不知乘月几人归，落月摇情满江树。',t:'春江花月夜',a:'张若虚'},
+  {s:'醉后不知天在水，满船清梦压星河。',t:'题龙阳县青草湖',a:'唐温如'},
+  {s:'迟迟钟鼓初长夜，耿耿星河欲曙天。',t:'长恨歌',a:'白居易'},
+  {s:'愿我如星君如月，夜夜流光相皎洁。',t:'车遥遥篇',a:'范成大'},
+  {s:'欲寄彩笺兼尺素，山长水阔知何处。',t:'蝶恋花',a:'晏殊'},
+  {s:'人生若只如初见，何事秋风悲画扇。',t:'木兰词',a:'纳兰性德'},
+  {s:'最是人间留不住，朱颜辞镜花辞树。',t:'蝶恋花',a:'王国维'},
+  {s:'人面不知何处去，桃花依旧笑春风。',t:'题都城南庄',a:'崔护'},
+  {s:'金风玉露一相逢，便胜却人间无数。',t:'鹊桥仙',a:'秦观'},
+  {s:'小楼一夜听春雨，深巷明朝卖杏花。',t:'临安春雨初霁',a:'陆游'},
+  {s:'疏影横斜水清浅，暗香浮动月黄昏。',t:'山园小梅',a:'林逋'},
+  {s:'白雪却嫌春色晚，故穿庭树作飞花。',t:'春雪',a:'韩愈'},
+  {s:'晓看天色暮看云，行也思君，坐也思君。',t:'长相思',a:'佚名'},
+  {s:'云中谁寄锦书来，雁字回时，月满西楼。',t:'一剪梅',a:'李清照'},
+  {s:'南朝四百八十寺，多少楼台烟雨中。',t:'江南春',a:'杜牧'},
+  {s:'草长莺飞二月天，拂堤杨柳醉春烟。',t:'村居',a:'高鼎'},
+  {s:'郴江幸自绕郴山，为谁流下潇湘去。',t:'踏莎行',a:'秦观'},
+  {s:'物是人非事事休，欲语泪先流。',t:'武陵春',a:'李清照'},
+  {s:'念桥边红药，年年知为谁生。',t:'扬州慢',a:'姜夔'},
+  {s:'春水碧于天，画船听雨眠。',t:'菩萨蛮',a:'韦庄'},
+  {s:'曲终人不见，江上数峰青。',t:'省试湘灵鼓瑟',a:'钱起'},
+  {s:'月落乌啼霜满天，江枫渔火对愁眠。',t:'枫桥夜泊',a:'张继'},
+  {s:'日暮酒醒人已远，满天风雨下西楼。',t:'谢亭送别',a:'许浑'},
+  {s:'桃李春风一杯酒，江湖夜雨十年灯。',t:'寄黄几复',a:'黄庭坚'},
+  {s:'从此音尘各悄然，春山如黛草如烟。',t:'浣溪沙',a:'纳兰性德'},
+  {s:'山月不知心里事，水风空落眼前花。',t:'梦江南',a:'温庭筠'},
+  {s:'青山一道同云雨，明月何曾是两乡。',t:'送柴侍御',a:'王昌龄'},
+  {s:'我见青山多妩媚，料青山见我应如是。',t:'贺新郎',a:'辛弃疾'},
+  {s:'只愿君心似我心，定不负相思意。',t:'卜算子',a:'李之仪'},
+  {s:'桃花一簇开无主，可爱深红爱浅红。',t:'江畔独步寻花',a:'杜甫'},
+  {s:'水晶帘动微风起，满架蔷薇一院香。',t:'山亭夏日',a:'高骈'},
+  {s:'落花人独立，微雨燕双飞。',t:'临江仙',a:'晏几道'},
+  {s:'当时明月在，曾照彩云归。',t:'虞美人',a:'晏几道'},
+  {s:'曾经沧海难为水，除却巫山不是云。',t:'离思',a:'元稹'},
+  {s:'东风夜放花千树，更吹落，星如雨。',t:'青玉案·元夕',a:'辛弃疾'},
+  {s:'春潮带雨晚来急，野渡无人舟自横。',t:'滁州西涧',a:'韦应物'},
+  {s:'一道残阳铺水中，半江瑟瑟半江红。',t:'暮江吟',a:'白居易'},
+  {s:'泪眼问花花不语，乱红飞过秋千去。',t:'蝶恋花',a:'欧阳修'},
+  {s:'窗含西岭千秋雪，门泊东吴万里船。',t:'绝句',a:'杜甫'},
+  {s:'永夜恹恹欢意少，空梦长安，认取长安道。',t:'蝶恋花',a:'李清照'},
+  {s:'明月楼高休独倚，酒入愁肠，化作相思泪。',t:'苏幕遮',a:'范仲淹'},
+  {s:'此时相望不相闻，愿逐月华流照君。',t:'春江花月夜',a:'张若虚'},
+  {s:'空山新雨后，天气晚来秋。',t:'山居秋暝',a:'王维'},
+  {s:'寄蜉蝣于天地，渺沧海之一粟。',t:'赤壁赋',a:'苏轼'},
+  {s:'素湍绿潭，回清倒影。',t:'三峡',a:'郦道元'},
+  {s:'烟笼寒水月笼沙，夜泊秦淮近酒家。',t:'泊秦淮',a:'杜牧'},
+  {s:'旧时王谢堂前燕，飞入寻常百姓家。',t:'乌衣巷',a:'刘禹锡'},
+  {s:'人间四月芳菲尽，山寺桃花始盛开。',t:'大林寺桃花',a:'白居易'},
+  {s:'正是江南好风景，落花时节又逢君。',t:'江南逢李龟年',a:'杜甫'},
+  {s:'赌书消得泼茶香，当时只道是寻常。',t:'浣溪沙',a:'纳兰性德'},
+  {s:'天接云涛连晓雾，星河欲转千帆舞。',t:'渔家傲',a:'李清照'},
+  {s:'雨横风狂三月暮，门掩黄昏，无计留春住。',t:'蝶恋花',a:'欧阳修'},
+  {s:'居庙堂之高则忧其民，处江湖之远则忧其君。',t:'岳阳楼记',a:'范仲淹'},
+  {s:'欲买桂花同载酒，终不似，少年游。',t:'唐多令',a:'刘过'}
+];
+
+var _poemIdx=0;
+function rotatePoem(){
+  _poemIdx=Math.floor(Math.random()*POEMS.length);
+  _curPoem=POEMS[_poemIdx];
+  var el=document.getElementById('poemLine');
+  if(el)el.textContent=_curPoem.s;
+}
+function showPoem(){
+  if(!_curPoem)return;
+  document.getElementById('poemBody').textContent=_curPoem.s;
+  document.getElementById('poemMeta').textContent='《'+_curPoem.t+'》· '+_curPoem.a;
+  document.getElementById('poemOverlay').classList.add('open');
+}
+function closePoemOverlay(){document.getElementById('poemOverlay').classList.remove('open');}
+function copyPoem(){
+  if(!_curPoem)return;
+  var txt=_curPoem.s+'　——《'+_curPoem.t+'》'+_curPoem.a;
+  if(typeof ksu!=='undefined')ksu.toast('已复制');
+  try{navigator.clipboard.writeText(txt);}catch(e){}
+  toast('已复制');
+  closePoemOverlay();
+}
+
+// ── 时钟 ─────────────────────────────────────────────────────
+function tickClock(){
+  var now=new Date();
+  var h=now.getHours().toString().padStart(2,'0');
+  var m=now.getMinutes().toString().padStart(2,'0');
+  var s=now.getSeconds().toString().padStart(2,'0');
+  var el=document.getElementById('clockEl');
+  if(el)el.textContent=h+':'+m+':'+s;
+}
+
+// ── 主题（默认白色，body.dark=深色）─────────────────────────
+function toggleTheme(isDark){
+  document.body.classList.toggle('dark',isDark);
+  exec("printf '%s' '"+(isDark?'dark':'light')+"' > '"+M+"/.webui_theme'");
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg,duration){
+  var el=document.getElementById('toastBar');
+  clearTimeout(el._t);
+  el.textContent=msg;el.classList.add('show');
+  el._t=setTimeout(function(){el.classList.remove('show');},duration||2500);
+}
+
+
+
+// ── 标签切换 ─────────────────────────────────────────────────
+function go(n){
+  curTab=n;
+  document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('act',i===n);});
+  document.querySelectorAll('.pg').forEach(function(p,i){p.classList.toggle('act',i===n);});
+  document.getElementById('fab').style.display=n===1?'flex':'none';
+  if(n!==2){stopAutoRefresh();}
+  if(n!==0){stopStatusRefresh();}
+  if(n===0){loadSettings();startStatusRefresh();}
+  if(n===1)loadRules();
+  if(n===2){loadLog();startAutoRefresh();}
+}
+
+// ── 顶栏状态图标 ─────────────────────────────────────────────
+function setHdrStatus(state,label){
+  var txt=document.getElementById('hdStatusTxt');
+  var icon=document.getElementById('hdStatusIcon');
+  if(state==='run'){
+    txt.textContent=label||'运行中';txt.style.color='#4caf50';
+    icon.innerHTML='<circle cx="12" cy="12" r="11" fill="#4caf50"/><path d="M7 12.5l3.5 3.5 6.5-7" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+  } else if(state==='stp'){
+    txt.textContent=label||'未运行';txt.style.color='#ff5555';
+    icon.innerHTML='<circle cx="12" cy="12" r="11" fill="#ff5555"/><path d="M8 8l8 8M16 8l-8 8" stroke="white" stroke-width="2.2" stroke-linecap="round"/>';
+  } else if(state==='rst'){
+    // 重启中：橙色圆 + 顺时针箭头，语义独立于「检测中」
+    txt.textContent=label||'重启中';txt.style.color='var(--ora)';
+    icon.innerHTML='<circle cx="12" cy="12" r="11" fill="var(--ora)"/><path d="M12 7a5 5 0 1 1-4.33 2.5" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/><polyline points="7.5,7.5 7.5,10 10,10" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+  } else {
+    txt.textContent=label||'检测中';txt.style.color='#f0b429';
+    icon.innerHTML='<circle cx="12" cy="12" r="11" fill="#f0b429"/><circle cx="8" cy="12" r="1.5" fill="white"/><circle cx="12" cy="12" r="1.5" fill="white"/><circle cx="16" cy="12" r="1.5" fill="white"/>';
+  }
+}
+
+
+// ── 状态页 ───────────────────────────────────────────────────
+
+function checkModuleState(){
+  exec("[ -f '"+M+"/disable' ] && echo 1||echo 0",function(e,out){
+    var dis=(out||'').trim()==='1';
+    _moduleEnabled=!dis;
+    var sw=document.getElementById('swModule');
+    if(sw)sw.checked=_moduleEnabled;
+  });
+}
+
+function toggleModule(enabled){
+  var sw=document.getElementById('swModule');
+  sw.disabled=true; _moduleEnabled=enabled;
+  if(enabled){
+    exec("rm -f '"+M+"/disable'", function(){
+      // 直接拉起 watchdog，watchdog 负责拉起 service
+      exec("sh '"+M+"/scripts/watchdog.sh' >> '"+LF+"' 2>&1 &", function(){
+        sw.disabled=false; sw.checked=true; _moduleEnabled=true;
+        toast('已启用，正在初始化...');
+      });
+    });
+  } else {
+    exec("touch '"+M+"/disable'", function(){
+      // 同时杀 service 和 watchdog
+      var cmd="p=$(cat '"+LK+"' 2>/dev/null); kill $p 2>/dev/null;"
+             +"pkill -f 'watchdog.sh' 2>/dev/null;"
+             +"rm -f '"+M+"/.watchdog.pid'; sleep 1";
+      exec(cmd, function(){
+        sw.disabled=false; sw.checked=false; _moduleEnabled=false;
+        setHdrStatus('stp');
+        document.getElementById('sStat').className='bdg stp';
+        document.getElementById('sStat').textContent='未运行';
+        document.getElementById('sPid').textContent='—';
+        document.getElementById('sWdPid').textContent='—';
+        toast('已停止');
+      });
+    });
+  }
+}
+
+var _statusTimer=null;
+
+function loadStatus(onDone){
+  exec("cat '"+LK+"' 2>/dev/null", function(e, pidRaw){
+    var sStat=document.getElementById('sStat');
+    pidRaw=(pidRaw||'').trim();
+    if(!/^\d+$/.test(pidRaw)){
+      setHdrStatus('stp');
+      sStat.className='bdg stp'; sStat.textContent='未运行';
+      document.getElementById('sPid').textContent='—';
+      document.getElementById('sWdPid').textContent='—';
+      if(onDone)onDone(false); return;
+    }
+    exec("kill -0 "+pidRaw+" 2>/dev/null && echo 1||echo 0", function(e2,r){
+      var run=(r||'').trim()==='1';
+      setHdrStatus(run?'run':'stp');
+      sStat.className='bdg '+(run?'run':'stp');
+      sStat.textContent=run?'运行中':'未运行';
+      document.getElementById('sPid').textContent=run?pidRaw:'—';
+      if(onDone)onDone(run);
+    });
+  });
+  // 看门狗 PID
+  exec("cat '"+WK+"' 2>/dev/null", function(e, wdRaw){
+    wdRaw=(wdRaw||'').trim();
+    if(!/^\d+$/.test(wdRaw)){
+      document.getElementById('sWdPid').textContent='—'; return;
+    }
+    exec("kill -0 "+wdRaw+" 2>/dev/null && echo 1||echo 0", function(e2,r){
+      var alive=(r||'').trim()==='1';
+      document.getElementById('sWdPid').textContent=alive?wdRaw:'—';
+    });
+  });
+  exec("cat '"+M+"/redirect.rules' 2>/dev/null", function(e, rfRaw){
+    _infoRules=[]; _infoDirs=[];
+    (rfRaw||'').split('\n').forEach(function(l){
+      var t=l.trim();
+      if(t&&t[0]!=='#'){
+        var p=t.split('|');
+        if(p.length>=3){
+          _infoRules.push(t);
+          if(p[0]&&_infoDirs.indexOf(p[0])<0)_infoDirs.push(p[0]);
+        }
+      }
+    });
+    document.getElementById('sRules').textContent=_infoRules.length+' 条';
+    document.getElementById('sDirs').textContent=_infoDirs.length+' 个';
+  });
+}
+
+function startStatusRefresh(){
+  if(_statusTimer)return;
+  loadStatus();
+  _statusTimer=setInterval(function(){ if(curTab===0)loadStatus(); },1000);
+}
+function stopStatusRefresh(){
+  clearInterval(_statusTimer); _statusTimer=null;
+}
+
+function _showInfo(title, items){
+  document.getElementById('infoTitle').textContent=title;
+  var html=items.length
+    ? items.map(function(s){return '<div class="detail-item">'+s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';}).join('')
+    : '<div class="detail-item" style="color:var(--txt2)">暂无数据</div>';
+  document.getElementById('infoList').innerHTML=html;
+  document.getElementById('infoModal').classList.add('open');
+}
+function showRules(){ _showInfo('有效规则（'+_infoRules.length+' 条）', _infoRules); }
+function showDirs(){  _showInfo('监控目录（'+_infoDirs.length+' 个）', _infoDirs); }
+function closeInfo(){ document.getElementById('infoModal').classList.remove('open'); }
+
+
+// ── 规则页 ───────────────────────────────────────────────────
+var _sortMode=false;
+
+function toggleSortMode(){
+  var wasSort=_sortMode;
+  _sortMode=!_sortMode;
+  var btn=document.getElementById('btnSort');
+  if(btn){btn.textContent=_sortMode?'完成':'排序';btn.style.color=_sortMode?'var(--pri)':'';}
+  var fab=document.getElementById('fab');
+  if(fab)fab.style.display=_sortMode?'none':'flex';
+  if(wasSort){
+    // 退出排序时统一写入
+    writeRules(function(){renderRules();});
+  } else {
+    renderRules();
+  }
+}
+
+function sortMoveUp(i){
+  if(i===0)return;
+  var tmp=rules[i-1];rules[i-1]=rules[i];rules[i]=tmp;
+  renderRules();
+}
+function sortMoveDown(i){
+  if(i>=rules.length-1)return;
+  var tmp=rules[i+1];rules[i+1]=rules[i];rules[i]=tmp;
+  renderRules();
+}
+
+function loadRules(){
+  exec("cat '"+M+"/redirect.rules' 2>/dev/null",function(e,out){
+    parseRules(out||'');renderRules();
+  });
+}
+
+function parseRules(text){
+  rules=[];hdrLines=[];
+  var lines=text.split('\n');
+  // 先找第一条规则行的下标，之前的全归头部
+  var firstRule=-1;
+  for(var fi=0;fi<lines.length;fi++){
+    var ft=lines[fi].trim();
+    if(!ft||ft[0]==='#') continue;
+    var fa=ft.slice(0,2)==='##'?ft.slice(2).trim():ft;
+    var fp=fa.split('|');
+    if(fp.length>=3&&fp[0]&&fp[2]){firstRule=fi;break;}
+  }
+  lines.forEach(function(l,idx){
+    var t=l.trim();
+    if(firstRule<0||idx<firstRule){
+      // 头部区域：只保留注释行，空行丢弃（序列化时统一加一个空行分隔）
+      if(t&&t[0]==='#') hdrLines.push(l);
+      return;
+    }
+    if(!t) return; // 规则区域空行跳过
+    if(t[0]==='#'&&t.slice(0,2)!=='##') return; // 规则区域内单#注释忽略
+    var disabled=false,tActive=t;
+    if(t.slice(0,2)==='##'){disabled=true;tActive=t.slice(2).trim();}
+    var p=tActive.split('|');
+    if(p.length>=3&&p[0]&&p[2]){
+      rules.push({src:p[0].trim(),pat:p[1].trim(),dst:p[2].trim(),
+                  note:getNoteKey(p[0].trim(),p[1].trim(),p[2].trim()),
+                  disabled:disabled});
+    }
+  });
+}
+
+function serializeRules(){
+  var h=hdrLines.join('\n');
+  var r=rules.map(function(x){
+    var line=x.src+'|'+x.pat+'|'+x.dst;
+    return x.disabled?'## '+line:line;
+  }).join('\n');
+  // 头部和规则之间固定一个空行，不累积
+  var sep=h?'\n\n':'';
+  return h+sep+r+(r?'\n':'');
+}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function renderRules(){
+  var list=document.getElementById('rList'),empty=document.getElementById('rEmpty');
+  if(!rules.length){list.innerHTML='';empty.style.display='';return;}
+  empty.style.display='none';
+
+  var redirRules=[];
+  rules.forEach(function(r,i){ redirRules.push({r:r,i:i}); });
+
+  function renderCard(item){
+    var r=item.r, i=item.i;
+    var riCls='ri'+(r.disabled?' rule-off':'');
+    return '<div class="'+riCls+'" id="ri-'+i+'">'
+      +(r.note?'<div class="r-note">'+esc(r.note)+'</div>':'')
+      +'<div class="rp">监控 <b>'+esc(r.src)+'</b></div>'
+      +'<div class="rp">匹配 <b>'+esc(r.pat||'*（全部）')+'</b></div>'
+      +'<div class="rp">移至 <b>'+esc(r.dst)+'</b></div>'
+
+      +(_sortMode
+        ?'<div class="ra">'
+         +(function(){
+          var noUp=i===0;
+          var noDown=i>=rules.length-1;
+          return '<button class="btn bsm" onclick="sortMoveUp('+i+')"'+(noUp?' disabled':'')+'>↑ 上移</button>'
+               +'<button class="btn bsm" onclick="sortMoveDown('+i+')"'+(noDown?' disabled':'')+'>↓ 下移</button>';
+        }())
+         +'</div>'
+        :'<div class="ra">'
+         +'<button class="btn bsm" style="color:'+(r.disabled?'var(--grn)':'var(--ylw)')+'" onclick="toggleRuleEnabled('+i+')">'
+         +(r.disabled?'启用':'禁用')
+         +'</button>'
+         +'<button class="btn bsm" onclick="editRule('+i+')">编辑</button>'
+         +'<button class="btn bd bsm" onclick="delRule('+i+')">删除</button>'
+         +'</div>'
+      )+'</div>';
+  }
+
+  var html='';
+
+  // 重定向规则分组
+  if(redirRules.length){
+    html+='<div class="rules-group-title">重定向规则</div>';
+    html+=redirRules.map(renderCard).join('');
+  }
+
+
+  list.innerHTML=html;
+}
+
+// ── 轮询日志等待热重载确认 ──────────────────────────────────
+function _waitHotReload(){
+  // 先抓当前日志行数作为基准，只看写入之后新增的行
+  exec("wc -l < '"+LF+"' 2>/dev/null || echo 0", function(e, out){
+    var baseline=parseInt((out||'0').trim(),10)||0;
+    var tried=0, maxTry=12; // 最多轮询12次，每次500ms，共6s
+    var timer=setInterval(function(){
+      tried++;
+      // 只读 baseline 行之后新增的内容
+      exec("awk 'NR>"+(baseline)+"' '"+LF+"' 2>/dev/null", function(e2, log){
+        var found=(log||'').indexOf('规则变更')>=0;
+        if(found){
+          clearInterval(timer);
+          toast('\u26a1 热重启已触发');
+        } else if(tried>=maxTry){
+          clearInterval(timer);
+          toast('规则已保存，请重启生效！');
+        }
+      });
+    },500);
+  });
+}
+
+function writeRules(cb){
+  var content=serializeRules();
+  var b64=btoa(unescape(encodeURIComponent(content)));
+  // 分块写入：每次500字节base64，避免exec命令超长被截断
+  var CHUNK=500;
+  exec(": > '"+RF+".tmp'", function(){
+    var i=0;
+    function writeChunk(){
+      if(i>=b64.length){
+        // 全部写完，base64解码并移动到目标
+        exec("base64 -d '"+RF+".tmp' > '"+RF+"' && rm '"+RF+".tmp' && echo ok",function(e,out){
+          if((out||'').indexOf('ok')<0){toast('\u2757 规则写入失败');return;}
+          toast('\u2705 规则已保存，热重启中...');
+          if(cb)cb();
+          // 轮询日志验证热重载是否真实触发
+          _waitHotReload();
+        });
+        return;
+      }
+      var chunk=b64.slice(i,i+CHUNK);
+      i+=CHUNK;
+      exec("printf '%s' '"+chunk+"' >> '"+RF+".tmp'",function(){writeChunk();});
+    }
+    writeChunk();
+  });
+}
+
+
+function openAdd(){
+  editIdx=-1;
+  document.getElementById('mTitle').textContent='添加规则';
+  ['fNote','fSrc','fPat','fDst'].forEach(function(id){document.getElementById(id).value='';}); 
+
+  document.getElementById('modal').classList.add('open');
+}
+function editRule(i){
+  editIdx=i;
+  document.getElementById('mTitle').textContent='编辑规则';
+  document.getElementById('fNote').value=getNoteKey(rules[i].src,rules[i].pat,rules[i].dst);
+  document.getElementById('fSrc').value=rules[i].src;
+  document.getElementById('fPat').value=rules[i].pat;
+
+  document.getElementById('fDst').value=rules[i].dst;
+
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function saveRule(){
+  var note=document.getElementById('fNote').value.trim().replace(/[\r\n]/g,'');
+  var src=document.getElementById('fSrc').value.trim().replace(/[\r\n]/g,'');
+  var pat=document.getElementById('fPat').value.trim().replace(/[\r\n]/g,'');
+  var dst=document.getElementById('fDst').value.trim();
+  if(!src||!dst){toast('监控目录和目标目录不能为空');return;}
+  if(src[0]!=='/'){toast('监控目录必须为绝对路径（以 / 开头）');return;}
+  if(dst[0]!=='/'){toast('目标目录必须为绝对路径（以 / 开头）');return;}
+  if(src.indexOf('|')>=0||pat.indexOf('|')>=0||dst.indexOf('|')>=0){toast('路径和规则中不能包含竖线字符 |');return;}
+  var wasDisabled=editIdx>=0?(rules[editIdx].disabled||false):false;
+  if(editIdx>=0)rules[editIdx]={src:src,pat:pat,dst:dst,note:note,disabled:wasDisabled};
+  else rules.push({src:src,pat:pat,dst:dst,note:note,disabled:false});
+  setNoteKey(src,pat,dst,note);
+  writeRules(function(){closeModal();renderRules();});
+}
+function delRule(i){
+  if(!confirm('确认删除该规则吗？删除后无法恢复'))return;
+  var r=rules[i]; // 先保存，splice 后 index 失效
+  setNoteKey(r.src,r.pat,r.dst,'');
+  rules.splice(i,1);
+  writeRules(function(){renderRules();});
+}
+
+// ── 设置页 ───────────────────────────────────────────────────
+
+function toggleRuleEnabled(i){
+  rules[i].disabled=!rules[i].disabled;
+  writeRules(function(){renderRules();});
+}
+
+
+function loadSettings(){
+  loadCfg(function(){
+    document.getElementById('swSS').checked  =_cfg['STARTUP_SCAN']==='1';
+    document.getElementById('inLD').value    =_cfg['LOG_KEEP_DAYS']||'7';
+    
+  });
+}
+
+function loadCfg(cb){
+  // 读 key=value 格式，不依赖顺序
+  var cmd="grep -e '^STARTUP_SCAN=' -e '^LOG_KEEP_DAYS=' '"+SH+"'";
+  exec(cmd,function(e,out){
+    (out||'').split('\n').forEach(function(l){
+      var eq=l.indexOf('=');
+      if(eq<0)return;
+      var k=l.slice(0,eq).trim(), v=l.slice(eq+1).replace(/#.*/,'').trim();
+      if(k)_cfg[k]=v;
+    });
+    if(cb)cb();
+  });
+}
+
+
+
+var _restartTimer=null;
+function applySetting(key,val){
+  _cfg[key]=val;
+  clearTimeout(_restartTimer);
+  _restartTimer=setTimeout(function(){
+    exec("sed -i 's|^"+key+"=.*|"+key+"="+val+"|' '"+SH+"' && echo ok",function(e,out){
+      if((out||'').indexOf('ok')<0){toast(key+' 写入失败');return;}
+      toast('已保存，重启设备生效');
+    });
+  },600);
+}
+
+// ── 手动清理空文件夹 ─────────────────────────────────────────
+var _sweepRunning=false;
+function manualSweep(){
+  if(_sweepRunning){toast('清理正在进行中，请稍候');return;}
+  var btn=document.getElementById('btnSweep');
+  var logEl=document.getElementById('sweepLog');
+  _sweepRunning=true;
+  btn.disabled=true; btn.textContent='清理中...';
+  logEl.style.display='none'; logEl.textContent='';
+  toast('清理中，完成后请到日志页查看结果');
+  exec("sh '"+M+"/scripts/clean_sdcard.sh'",function(e,out){
+    _sweepRunning=false;
+    btn.disabled=false; btn.textContent='扫描并清理';
+    if(!out&&e!==0){
+      logEl.textContent='执行失败，请查看日志';
+      logEl.style.display='block';
+      return;
+    }
+    // 后端返回 RUNNING 表示另一个实例正在运行
+    if((out||'').indexOf('RUNNING')>=0){
+      logEl.textContent='已在运行中，请稍后再试';
+      logEl.style.display='block';
+      toast('清理已在进行中，请稍候');
+      return;
+    }
+    var deleted=(out||'').split('\n').filter(function(l){return l.indexOf('DEL\t')===0;});
+    var summary=deleted.length?'已清理 '+deleted.length+' 个空文件夹':'无空文件夹可清理';
+    if(deleted.length){
+      logEl.textContent=summary+'\n'+deleted.map(function(l){return '✓ '+l.slice(4);}).join('\n');
+    }else{
+      logEl.textContent=summary;
+    }
+    logEl.style.display='block';
+  });
+}
+
+// ── 日志页 ───────────────────────────────────────────────────
+var _logMode='simple';
+var _logRaw='';
+
+function setLogMode(mode){
+  _logMode=mode;
+  document.getElementById('btnModeSimple').classList.toggle('act',mode==='simple');
+  document.getElementById('btnModeDetail').classList.toggle('act',mode==='detail');
+  _renderLog();
+}
+
+function _renderLog(){
+  var box=document.getElementById('logBox');
+  if(!_logRaw){box.innerHTML='<span style="color:#888">日志为空</span>';return;}
+  var atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;
+  var lines=_logRaw.split('\n');
+  var html='';
+  for(var i=0;i<lines.length;i++){
+    var l=lines[i];
+    if(!l)continue;
+    var s=l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    var isErr=l.indexOf('[ERROR]')>=0;
+    var isWarn=l.indexOf('[WARN]')>=0;
+    var isDbg=l.indexOf('[DEBUG]')>=0;
+    if(_logMode==='simple'){
+      var isFile=l.indexOf('][FILE]')>=0;
+      if(!isErr && !isFile)continue;
+      var _tsm=s.match(/^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}) /);
+      var _ts=_tsm?'<span style="color:var(--txt2);font-size:10.5px">'+_tsm[1]+'</span> ':'';
+      var brief=s.replace(/^\d{2}-\d{2} \d{2}:\d{2}:\d{2} /,'')
+                 .replace(/\[(?:INFO|WARN|ERROR|DEBUG)\]\[[A-Z]+\] ?/,'');
+      if(isErr)html+='<span class="le">'+_ts+'\u274c '+brief+'</span>\n';
+      else if(isWarn)html+='<span class="lw">'+_ts+'\u26a0\ufe0f '+brief+'</span>\n';
+      else html+='<span class="li">'+_ts+brief+'</span>\n';
+    } else {
+      if(isErr)html+='<span class="le">'+s+'</span>\n';
+      else if(isWarn)html+='<span class="lw">'+s+'</span>\n';
+      else if(isDbg)html+='<span class="ld">'+s+'</span>\n';
+      else html+='<span class="li">'+s+'</span>\n';
+    }
+  }
+  box.innerHTML=html||'<span style="color:#888">暂无日志</span>';
+  if(atBottom||box.scrollTop===0)box.scrollTop=box.scrollHeight;
+}
+
+function loadLog(){
+  exec("cat '"+LF+"' 2>/dev/null",function(e,out){
+    document.getElementById('logTs').textContent='更新于 '+new Date().toLocaleTimeString();
+    _logRaw=(out||'').trim();
+    _renderLog();
+  });
+}
+function clearLog(){exec(": > '"+LF+"'");_logRaw='';setTimeout(loadLog,200);toast('日志已清空');}
+function startAutoRefresh(){
+  if(!autoTimer){loadLog();autoTimer=setInterval(function(){if(curTab===2)loadLog();},1000);}
+}
+function stopAutoRefresh(){clearInterval(autoTimer);autoTimer=null;}
+
+// ── 初始化 ────────────────────────────────────────────────────
+function _doInit(){
+  // 版本号
+  exec("grep '^version=' '"+M+"/module.prop' 2>/dev/null|cut -d= -f2",function(e,v){
+    var ver=(v||'').trim();
+    var hdr=document.getElementById('hdrVer');
+    if(hdr)hdr.textContent=ver||'';
+  });
+
+  // 主题初始化：读取持久化设置，默认白色（不存在则不加dark class）
+  exec("cat '"+M+"/.webui_theme' 2>/dev/null",function(e,theme){
+    var isDark=(theme||'').trim()==='dark';
+    document.body.classList.toggle('dark',isDark);
+    var sw=document.getElementById('swTheme');
+    if(sw)sw.checked=isDark;
+  });
+
+  // 诗词
+  rotatePoem();
+  setInterval(rotatePoem,30000);
+
+  // 时钟
+  tickClock();
+  setInterval(tickClock,1000);
+
+  checkModuleState();
+  startStatusRefresh();
+  loadSettings();
+}
+
+window.addEventListener('load',function(){
+  // 等待 bridge 注入完成后再初始化（KSU/APatch 注入时机略晚于 load 事件）
+  if(_bridge()){
+    _doInit();
+  } else {
+    var _t=0;
+    var _wait=setInterval(function(){
+      _t++;
+      if(_bridge()){clearInterval(_wait);_doInit();}
+      else if(_t>20){
+        clearInterval(_wait);
+        // bridge 超时：仍运行非 exec 功能（时钟、诗词）
+        rotatePoem(); setInterval(rotatePoem,30000);
+        tickClock(); setInterval(tickClock,1000);
+        toast('未检测到 KSU/APatch bridge，exec 功能不可用');
+      }
+    },100);
+  }
+});
+</script>
+</body>
+</html>
