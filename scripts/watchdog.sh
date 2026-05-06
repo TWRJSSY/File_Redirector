@@ -20,7 +20,7 @@ _is_our_service() {
     kill -0 "$_pid" 2>/dev/null || return 1
     _cmd=$(tr '\0' ' ' < "/proc/$_pid/cmdline" 2>/dev/null)
     # cmdline 为空（权限问题或内核线程）时保守处理：进程存在即认为是我们的服务
-    [ -z "$_cmd" ] && return 0
+    [ -z "$_cmd" ] && return 1
     case "$_cmd" in
         *service.sh*|*file_redirector*) return 0 ;;
     esac

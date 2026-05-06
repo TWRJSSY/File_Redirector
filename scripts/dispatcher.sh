@@ -23,6 +23,7 @@ while [ "$_try" -lt 30 ]; do
     if [ "$_try" -ge 10 ]; then
         rm -rf "$DISPATCH_LOCK" 2>/dev/null
         log_msg "WARN" "SYS" "dispatcher锁超时，强制清除"
+        continue
     fi
     _try=$(( _try + 1 ))
     sleep 1
