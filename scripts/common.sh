@@ -122,5 +122,13 @@ filename_matches() {
     return 1
 }
 
+# ── 临时文件过滤：补扫时跳过下载器的临时文件后缀 ──
+is_tmp_file() {
+    case "$1" in
+        *.tmp|*.part|*.crdownload|*.download|*.partial|*.!qB) return 0 ;;
+    esac
+    return 1
+}
+
 # ── SQL 单引号转义（供 media_fix.sh 使用）──
 sq_escape() { printf '%s' "$1" | sed "s/'/''/g"; }

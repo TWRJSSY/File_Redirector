@@ -134,7 +134,16 @@ body.dark .toast-bar{background:#222}
 .poem-copy{width:100%;padding:12px;border-radius:12px;background:var(--pri);color:#fff;border:none;font-size:15px;font-weight:500;cursor:pointer}
 
 
-/* Toast */
+/* 数字输入确认弹窗 */
+.num-confirm-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;align-items:flex-end}
+.num-confirm-ov.open{display:flex}
+.num-confirm-mod{background:var(--sur);border-radius:var(--r) var(--r) 0 0;padding:20px;width:100%;transition:background .3s}
+.num-confirm-title{font-size:15px;font-weight:600;margin-bottom:6px}
+.num-confirm-desc{font-size:12px;color:var(--txt2);margin-bottom:16px;line-height:1.5}
+.num-confirm-input{width:100%;background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;color:var(--txt);font-size:16px;text-align:center;margin-bottom:16px}
+.num-confirm-input:focus{outline:none;border-color:var(--pri)}
+.num-confirm-ma{display:flex;gap:10px}
+.num-confirm-ma .btn{flex:1}
 .toast-bar{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;opacity:0;transition:.25s;z-index:400;white-space:nowrap;pointer-events:none}
 .toast-bar.show{opacity:1}
 </style>
@@ -184,9 +193,13 @@ body.dark .toast-bar{background:#222}
       </div>
       <label class="sw"><input type="checkbox" id="swTheme" onchange="toggleTheme(this.checked)"><span class="sl"></span></label>
     </div>
-    <div class="srow" style="border-bottom:none">
+    <div class="srow">
       <div class="si"><div class="sl-t">日志保留天数</div><div class="sl-d">超过后下次服务启动时自动清空日志文件</div></div>
-      <input type="number" class="num-in" id="inLD" min="1" max="90" value="7" onblur="applySetting('LOG_KEEP_DAYS',this.value.trim()||'7')">
+      <input type="number" class="num-in" id="inLD" min="1" max="90" value="7" readonly onclick="openNumConfirm('LOG_KEEP_DAYS','日志保留天数','超过后下次服务启动时自动清空日志文件',1,90,'天')">
+    </div>
+    <div class="srow" style="border-bottom:none">
+      <div class="si"><div class="sl-t">文件写入稳定等待</div><div class="sl-d">搬运前检测文件大小和 ctime 连续稳定的最长等待时间，下载大文件时可适当调大</div></div>
+      <input type="number" class="num-in" id="inFSW" min="3" max="300" value="20" readonly onclick="openNumConfirm('FILE_STABLE_WAIT','文件写入稳定等待','搬运前检测文件大小和 ctime 连续稳定的最长等待时间，下载大文件时可适当调大',3,300,'秒')">
     </div>
   </div>
   <div class="card">
@@ -289,6 +302,19 @@ body.dark .toast-bar{background:#222}
     <div class="poem-body" id="poemBody">—</div>
     <div class="poem-meta" id="poemMeta">—</div>
     <button class="poem-copy" onclick="copyPoem()">复制</button>
+  </div>
+</div>
+
+<!-- 数字输入确认弹窗 -->
+<div id="numConfirmOv" class="num-confirm-ov" onclick="if(event.target===this)closeNumConfirm()">
+  <div class="num-confirm-mod">
+    <div class="num-confirm-title" id="numConfirmTitle">—</div>
+    <div class="num-confirm-desc" id="numConfirmDesc">—</div>
+    <input type="number" class="num-confirm-input" id="numConfirmInput">
+    <div class="num-confirm-ma">
+      <button class="btn" onclick="closeNumConfirm()">取消</button>
+      <button class="btn bp" onclick="confirmNumSetting()">确定</button>
+    </div>
   </div>
 </div>
 
@@ -788,15 +814,14 @@ function toggleRuleEnabled(i){
 
 function loadSettings(){
   loadCfg(function(){
-    document.getElementById('swSS').checked  =_cfg['STARTUP_SCAN']==='1';
-    document.getElementById('inLD').value    =_cfg['LOG_KEEP_DAYS']||'7';
-    
+    document.getElementById('swSS').checked =_cfg['STARTUP_SCAN']==='1';
+    document.getElementById('inLD').value   =_cfg['LOG_KEEP_DAYS']||'7';
+    document.getElementById('inFSW').value  =_cfg['FILE_STABLE_WAIT']||'20';
   });
 }
 
 function loadCfg(cb){
-  // 读 key=value 格式，不依赖顺序
-  var cmd="grep -e '^STARTUP_SCAN=' -e '^LOG_KEEP_DAYS=' '"+SH+"'";
+  var cmd="grep -e '^STARTUP_SCAN=' -e '^LOG_KEEP_DAYS=' -e '^FILE_STABLE_WAIT=' '"+SH+"'";
   exec(cmd,function(e,out){
     (out||'').split('\n').forEach(function(l){
       var eq=l.indexOf('=');
@@ -808,11 +833,40 @@ function loadCfg(cb){
   });
 }
 
-
+var _numConfirmKey='',_numConfirmMin=1,_numConfirmMax=999,_numConfirmUnit='';
+function openNumConfirm(key,title,desc,min,max,unit){
+  _numConfirmKey=key;
+  _numConfirmMin=min;
+  _numConfirmMax=max;
+  _numConfirmUnit=unit||'';
+  document.getElementById('numConfirmTitle').textContent=title;
+  document.getElementById('numConfirmDesc').textContent=desc;
+  var inp=document.getElementById('numConfirmInput');
+  inp.min=min; inp.max=max;
+  inp.value=_cfg[key]||'';
+  document.getElementById('numConfirmOv').classList.add('open');
+  setTimeout(function(){inp.focus();inp.select();},100);
+}
+function closeNumConfirm(){
+  document.getElementById('numConfirmOv').classList.remove('open');
+}
+function confirmNumSetting(){
+  var inp=document.getElementById('numConfirmInput');
+  var v=parseInt(inp.value,10);
+  if(isNaN(v)||v<_numConfirmMin||v>_numConfirmMax){
+    toast('请输入 '+_numConfirmMin+'～'+_numConfirmMax+' 之间的数值');
+    return;
+  }
+  closeNumConfirm();
+  applySetting(_numConfirmKey,String(v));
+}
 
 var _restartTimer=null;
 function applySetting(key,val){
   _cfg[key]=val;
+  // 同步回填对应控件显示
+  var map={'LOG_KEEP_DAYS':'inLD','FILE_STABLE_WAIT':'inFSW'};
+  if(map[key]){var el=document.getElementById(map[key]);if(el)el.value=val;}
   clearTimeout(_restartTimer);
   _restartTimer=setTimeout(function(){
     exec("sed -i 's|^"+key+"=.*|"+key+"="+val+"|' '"+SH+"' && echo ok",function(e,out){

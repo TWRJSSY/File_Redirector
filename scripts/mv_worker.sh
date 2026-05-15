@@ -11,6 +11,40 @@ SRC="$1"
 DST_DIR="$2"
 FNAME=$(basename "$SRC")
 
+# ── 写入稳定性检测：大小 + ctime 连续2轮不变才放行，防止搬走下载中的文件 ──
+# ctime（inode change time）在任何写操作后都会更新，比 mtime 更保险
+# 超时返回 exit 1，由 dispatcher 放入 retry 队列下轮重试
+_wait_stable() {
+    _prev_size=-1
+    _prev_ctime=-1
+    _stable=0
+    _try=0
+    _limit="${FILE_STABLE_WAIT:-20}"
+    case "$_limit" in *[!0-9]*|'') _limit=20 ;; esac
+    [ "$_limit" -lt 3 ] && _limit=3
+    while [ "$_try" -lt "$_limit" ]; do
+        [ -f "$SRC" ] || return 1
+        _cur_size=$(wc -c < "$SRC" 2>/dev/null | tr -d ' ')
+        _cur_ctime=$(stat -c '%Z' "$SRC" 2>/dev/null)
+        if [ "$_cur_size" = "$_prev_size" ] && [ "$_cur_ctime" = "$_prev_ctime" ]; then
+            _stable=$(( _stable + 1 ))
+            if [ "$_stable" -ge 2 ]; then
+                return 0
+            fi
+        else
+            _prev_size="$_cur_size"
+            _prev_ctime="$_cur_ctime"
+            _stable=0
+        fi
+        sleep 1
+        _try=$(( _try + 1 ))
+    done
+    log_msg "WARN" "FILE" "写入超时（${_limit}s），稍后重试: $FNAME"
+    return 1
+}
+
+_wait_stable || exit 1
+
 [ -d "$DST_DIR" ] || mkdir -p "$DST_DIR" 2>/dev/null || \
     { log_msg "ERROR" "FILE" "创建目录失败: $DST_DIR"; exit 1; }
 
@@ -36,12 +70,6 @@ if [ "$_src_dev" = "$_dst_dev" ]; then
         exit 0
     fi
     log_msg "WARN" "FILE" "同分区 mv 失败，尝试 cp 兜底: $SRC"
-fi
-
-# 跨分区：文件为空时静默跳过，进 retry 队列等下一轮
-_fsize=$(wc -c < "$SRC" 2>/dev/null | tr -d ' ')
-if [ "${_fsize:-0}" -eq 0 ] 2>/dev/null; then
-    exit 1
 fi
 
 # 跨分区：cp → 大小+MD5校验 → rm，失败重试一次

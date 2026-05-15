@@ -59,50 +59,27 @@
 
 ```mermaid
 graph TD
-    %% 定义主流程子图
-    subgraph MainFlow ["主流程"]
-        rules[redirect.rules<br/>规则文件 · 热重载]
-        service[service.sh<br/>主服务 · 单实例守护 · 调度]
-        monitor[monitor.sh<br/>inotifywait · 事件监听 · 防抖]
-        incoming([incoming.q])
-        dispatcher[dispatcher.sh<br/>队列隔离 · 去重 · 并发分发]
-        worker[mv_worker.sh<br/>同分区 mv · 跨分区 cp+MD5]
-        fix[media_fix.sh<br/>权限修复 · 媒体库同步 · 广播]
+    S[service.sh<br/>主服务 · 单实例守护 · 统筹调度]
+    W[watchdog.sh<br/>看门狗 · 2min 心跳 · 崩溃自动拉起]
+    M[monitor.sh<br/>inotifywait · 事件监听 · 防抖]
+    D[dispatcher.sh<br/>队列消费 · 去重 · 并发分发]
+    Q[(incoming.q)]
+    R[(retry.q)]
+    V[mv_worker.sh<br/>同分区 mv · 跨分区 cp + MD5]
+    F[media_fix.sh<br/>权限修复 · 媒体库同步 · 广播]
+    RU[redirect.rules<br/>规则文件 · 热重载]
 
-        rules --> service
-        service -- 启动 --> monitor
-        monitor -- 写入路径 --> incoming
-        incoming -- 消费 --> dispatcher
-        dispatcher -- 分发 --> worker
-        worker -- 移动成功 --> fix
-    end
-
-    %% 定义守护/重试子图
-    subgraph Ops ["守护 / 重试 / 扫描"]
-        watchdog[watchdog.sh<br/>120s 心跳 · 崩溃自动拉起]
-        scan[被动扫描<br/>启动 / 规则变更触发]
-        retry([retry.q])
-
-        %% 辅助连接
-        service -. 启动 .-> watchdog
-        service -. 触发扫描 .-> scan
-        worker -- 失败 --> retry
-    end
-
-    %% 手绘红线对应的逻辑连接
-    watchdog -- "高优先级拉起<br/>(mtime 变化)" --> service
-    scan -- 写入 --> incoming
-    retry -- "重试 (下次处理)" --> dispatcher
-
-    %% 样式美化
-    style incoming fill:#e8f5e9,stroke:#2e7d32
-    style retry fill:#fff3e0,stroke:#ef6c00
-    style watchdog fill:#ffebee,stroke:#c62828
-    style scan fill:#f1f8e9,stroke:#558b2f
-    style service fill:#e8eaf6,stroke:#3f51b5
-    style monitor fill:#e8eaf6,stroke:#3f51b5
-    style dispatcher fill:#e8eaf6,stroke:#3f51b5
-    style worker fill:#e8eaf6,stroke:#3f51b5
+    S -->|启动| M
+    S -->|调度| D
+    S -->|启动| W
+    W -.->|存活检测 · 故障拉起| S
+    RU -.->|mtime 变化| S
+    M -->|写入路径| Q
+    Q -->|消费| D
+    D -->|分发| V
+    V -->|失败| R
+    R -.->|下轮合并| D
+    V -->|移动成功| F
 ```
 
 ---

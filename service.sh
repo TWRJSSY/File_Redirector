@@ -14,6 +14,9 @@ MEDIA_WAIT=1
 #日志保留天数
 LOG_KEEP_DAYS=7
 
+#文件写入稳定等待（秒）：搬运前检测文件大小和ctime连续稳定的最长等待时间，下载大文件时可适当调大
+FILE_STABLE_WAIT=20
+
 #主循环调度间隔（秒）
 DISPATCH_INTERVAL=2
 #─────────
@@ -21,7 +24,7 @@ DISPATCH_INTERVAL=2
 MODDIR="${0%/*}"
 case "$MODDIR" in /*) ;; *) MODDIR="/data/adb/modules/file_redirector" ;; esac
 
-export MODDIR STARTUP_SCAN MEDIA_WAIT LOG_KEEP_DAYS DISPATCH_INTERVAL
+export MODDIR STARTUP_SCAN MEDIA_WAIT LOG_KEEP_DAYS FILE_STABLE_WAIT DISPATCH_INTERVAL
 export RULES_FILE="$MODDIR/redirect.rules"
 export LOG_FILE="$MODDIR/redirector.log"
 export LOCK_FILE="$MODDIR/.service.pid"
@@ -162,7 +165,9 @@ main() {
     if [ "$STARTUP_SCAN" = "1" ] && [ "$_valid_count" -gt 0 ] 2>/dev/null; then
         log_msg "INFO" "SCAN" "服务启动，触发被动扫描..."
         cut -d'|' -f1 "$PARSED_RULES_FILE" | sort -u | while IFS= read -r _d; do
-            [ -d "$_d" ] && find "$_d" -type f 2>/dev/null >> "$QUEUE_IN"
+            [ -d "$_d" ] && find "$_d" -type f 2>/dev/null | while IFS= read -r _f; do
+                is_tmp_file "$(basename "$_f")" || printf '%s\n' "$_f"
+            done >> "$QUEUE_IN"
         done
         if [ -s "$QUEUE_IN" ]; then
             sh "$VAR_DISPATCHER" 2>>"$LOG_FILE"
@@ -198,7 +203,9 @@ main() {
             if [ "$STARTUP_SCAN" = "1" ]; then
                 log_msg "INFO" "SCAN" "规则变更，触发被动扫描..."
                 cut -d'|' -f1 "$PARSED_RULES_FILE" | sort -u | while IFS= read -r _d; do
-                    [ -d "$_d" ] && find "$_d" -type f 2>/dev/null >> "$QUEUE_IN"
+                    [ -d "$_d" ] && find "$_d" -type f 2>/dev/null | while IFS= read -r _f; do
+                        is_tmp_file "$(basename "$_f")" || printf '%s\n' "$_f"
+                    done >> "$QUEUE_IN"
                 done
             fi
         fi
@@ -208,7 +215,9 @@ main() {
             rm -f "$MODDIR/.rescan_trigger"
             log_msg "INFO" "SCAN" "主动扫描触发..."
             cut -d'|' -f1 "$PARSED_RULES_FILE" | sort -u | while IFS= read -r _d; do
-                [ -d "$_d" ] && find "$_d" -type f 2>/dev/null >> "$QUEUE_IN"
+                [ -d "$_d" ] && find "$_d" -type f 2>/dev/null | while IFS= read -r _f; do
+                    is_tmp_file "$(basename "$_f")" || printf '%s\n' "$_f"
+                done >> "$QUEUE_IN"
             done
             log_msg "INFO" "SCAN" "主动扫描入队完成"
         fi

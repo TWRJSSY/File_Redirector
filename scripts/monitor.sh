@@ -51,7 +51,9 @@ start_watchdog() {
                     log_msg "INFO" "SCAN" "看门狗：目录出现 $_d"
                     # 读取 STARTUP_SCAN：被动扫描总开关，目录出现后补扫存量文件
                     if [ "${STARTUP_SCAN:-1}" = "1" ]; then
-                        find "$_d" -type f 2>/dev/null >> "$QUEUE_IN"
+                        find "$_d" -type f 2>/dev/null | while IFS= read -r _f; do
+                            is_tmp_file "$(basename "$_f")" || printf '%s\n' "$_f"
+                        done >> "$QUEUE_IN"
                     fi
                     rm -f "$1" 2>/dev/null
                     exit 0
@@ -138,7 +140,9 @@ while true; do
     # 读取 STARTUP_SCAN：被动扫描总开关，inotifywait 建立后补扫一次（覆盖监控建立前漏掉的文件）
     if [ "${STARTUP_SCAN:-1}" = "1" ]; then
         while IFS= read -r _d; do
-            [ -d "$_d" ] && find "$_d" -type f 2>/dev/null >> "$QUEUE_IN"
+            [ -d "$_d" ] && find "$_d" -type f 2>/dev/null | while IFS= read -r _f; do
+                is_tmp_file "$(basename "$_f")" || printf '%s\n' "$_f"
+            done >> "$QUEUE_IN"
         done < "$VALID_FILE"
     fi
 

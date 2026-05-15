@@ -21,12 +21,13 @@ fi
 
 _exit() { exit "${1:-0}"; }
 
-# done.list 防爆：持续rm失败会导致done.list无限增长拖慢grep，超限则清空
+# done.list 防爆：超限则裁剪保留最后100条，避免清空时机不当导致去重失效
 if [ -f "$QUEUE_DONE" ]; then
     _dl=$(wc -l < "$QUEUE_DONE" 2>/dev/null | tr -d ' ')
     if [ "${_dl:-0}" -gt 500 ] 2>/dev/null; then
-        log_msg "WARN" "SYS" "done.list 过大（${_dl} 条），已清空"
-        : > "$QUEUE_DONE"
+        _tail=$(tail -100 "$QUEUE_DONE" 2>/dev/null)
+        printf '%s\n' "$_tail" > "$QUEUE_DONE" 2>/dev/null || : > "$QUEUE_DONE"
+        log_msg "WARN" "SYS" "done.list 已裁剪（${_dl} → 100 条）"
     fi
 fi
 
