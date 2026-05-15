@@ -61,7 +61,7 @@
 graph TD
     RU[redirect.rules<br/>规则文件 · 热重载]
     S[service.sh<br/>主服务 · 单实例守护 · 调度]
-    W[watchdog.sh ✦新<br/>120s心跳 · 崩溃自动拉起]
+    W[watchdog.sh<br/>120s心跳 · 崩溃自动拉起]
     M[monitor.sh<br/>inotifywait · 事件监听 · 防抖]
     SC[被动扫描<br/>启动/规则变更触发]
     Q[(incoming.q)]
@@ -70,17 +70,17 @@ graph TD
     R[(retry.q)]
     F[media_fix.sh<br/>权限修复 · 媒体库同步 · 广播]
 
-    RU -.->|mtime变化| S
+    RU -->|mtime变化| S
     S -->|启动| W
-    W -.->|崩溃拉起| S
+    W -->|崩溃拉起| S
     S -->|启动| M
-    S -.->|触发扫描| SC
+    S -->|触发扫描| SC
     SC -->|入队| Q
     M -->|写入路径| Q
     Q -->|消费| D
     D -->|分发| V
-    V -.->|失败| R
-    R -.->|下轮合并| D
+    V -->|失败| R
+    R -->|下轮合并| D
     V -->|移动成功| F
 ```
 
