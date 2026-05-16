@@ -198,7 +198,7 @@ body.dark .toast-bar{background:#222}
       <input type="number" class="num-in" id="inLD" min="1" max="90" value="7" readonly onclick="openNumConfirm('LOG_KEEP_DAYS','日志保留天数','超过后下次服务启动时自动清空日志文件',1,90,'天')">
     </div>
     <div class="srow" style="border-bottom:none">
-      <div class="si"><div class="sl-t">文件写入稳定等待</div><div class="sl-d">搬运前检测文件大小和 ctime 连续稳定的最长等待时间，下载大文件时可适当调大</div></div>
+      <div class="si"><div class="sl-t">文件写入稳定等待</div><div class="sl-d">搬运前检测文件大小和 ctime 连续稳定的最长等待时间</div></div>
       <input type="number" class="num-in" id="inFSW" min="3" max="300" value="20" readonly onclick="openNumConfirm('FILE_STABLE_WAIT','文件写入稳定等待','搬运前检测文件大小和 ctime 连续稳定的最长等待时间，下载大文件时可适当调大',3,300,'秒')">
     </div>
   </div>
