@@ -58,29 +58,27 @@
 ## 项目架构
 
 ```mermaid
-flowchart TD
-    RU[redirect.rules\n规则文件 · 热重载]
-    S[service.sh\n主服务 · 单实例守护 · 调度]
-    W[watchdog.sh\n120s心跳 · 崩溃自动拉起]
-    M[monitor.sh\ninotifywait · 事件监听 · 防抖]
-    SC[被动扫描\n启动/规则变更触发]
+graph TD
+    S[service.sh<br/>主服务 · 单实例守护 · 统筹调度]
+    W[watchdog.sh<br/>看门狗 · 2min 心跳 · 崩溃自动拉起]
+    M[monitor.sh<br/>inotifywait · 事件监听 · 防抖]
+    D[dispatcher.sh<br/>队列消费 · 去重 · 并发分发]
     Q[(incoming.q)]
-    D[dispatcher.sh\n队列消费 · 去重 · 并发分发]
-    V[mv_worker.sh\n同分区mv · 跨分区cp+MD5]
     R[(retry.q)]
-    F[media_fix.sh\n权限修复 · 媒体库同步 · 广播]
+    V[mv_worker.sh<br/>同分区 mv · 跨分区 cp + MD5]
+    F[media_fix.sh<br/>权限修复 · 媒体库同步 · 广播]
+    RU[redirect.rules<br/>规则文件 · 热重载]
 
-    RU -->|mtime变化| S
-    S -->|启动| W
     S -->|启动| M
-    S -->|触发扫描| SC
-    W -->|崩溃拉起| S
+    S -->|调度| D
+    S -->|启动| W
+    W -.->|存活检测 · 故障拉起| S
+    RU -.->|mtime 变化| S
     M -->|写入路径| Q
-    SC -->|入队| Q
     Q -->|消费| D
     D -->|分发| V
     V -->|失败| R
-    R -->|下轮合并| D
+    R -.->|下轮合并| D
     V -->|移动成功| F
 ```
 
